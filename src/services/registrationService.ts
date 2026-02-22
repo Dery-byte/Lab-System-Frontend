@@ -1,5 +1,5 @@
 import api from './api';
-import { Registration, CreateRegistrationRequest, ApiResponse } from '../types';
+import { Registration, CreateRegistrationRequest, GroupMember, ApiResponse } from '../types';
 
 export const registrationService = {
   create: async (data: CreateRegistrationRequest): Promise<Registration> => {
@@ -22,4 +22,12 @@ export const registrationService = {
     const response = await api.patch<ApiResponse<Registration>>(`/registrations/${id}/cancel`);
     return response.data.data;
   },
+
+
+
+  // In registrationService
+getGroupMembers: async (timeSlotId: number): Promise<GroupMember[]> => {
+  const response = await api.get(`/registrations/group-members/${timeSlotId}`);
+  return response.data;
+},
 };

@@ -252,6 +252,8 @@ export interface Registration {
   totalSessions: number;
   attendancePercentage: number;
   slotNumber:number,
+  groupNumber:number;
+  timeSlotId:number;
    student: {               // add this nested object
     id: number;
     fullName: string;
@@ -265,6 +267,16 @@ export interface Registration {
 export interface LoginRequest {
   email: string;
   password: string;
+}
+
+
+// In types.ts
+export interface GroupMember {
+  id: number;
+  fullName: string;
+  studentId: string;
+  username: string;
+  profilePictureUrl?: string;
 }
 
 export interface RegisterRequest {
