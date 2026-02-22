@@ -54,6 +54,8 @@ export interface Program {
   name: string;
   departmentName?: string;
   active: boolean;
+  coursesCount?:number;
+  studentsCount?:number;
 }
 
 // ==================== WEEKLY NOTE ====================
@@ -404,8 +406,8 @@ export interface CreateDepartmentRequest {
   name: string;
   description?: string;
   facultyId?: number;
-  faculty: string;
-  headOfDepartment?: string;
+  // faculty: string;
+  headOfDepartment: string;
 }
 
 // export interface CreateDepartmentRequest {
@@ -427,9 +429,9 @@ export interface CreateCourseRequest {
   departmentId: number;
   department: string;
   level: Level;
-  semester?: Semester;
+  semester: Semester;
   academicYear?: string;
-  creditHours?: number;
+  creditHours: number;
   instructorId?: number;
   hasLab?: boolean;
   allowedDepartments?: string[];
@@ -451,22 +453,26 @@ export interface Department {
   courseCount?: number;
 }
 
-// export interface CreateDepartmentRequest {
-//   code: string;
-//   name: string;
-//   description?: string;
-//   facultyId: number;
-//   faculty?: Faculty;
-//   headOfDepartment?: string;
-// }
+export interface Program {
+  id: number;
+  code: string;
+  name: string;
+  description?: string;
+  departmentName?: string;
+  facultyName?: string;
+  durationYears: number;
+  degreeType?: string;
+  active: boolean;
+}
 
-
-// export interface Faculty {
-//   id: number;
-//   name: string;
-//   code?: string;
-//   description?: string;
-// }
+export interface CreateProgramRequest {
+  code: string;
+  name: string;
+  description: string;
+  departmentId: number;
+  durationYears: number;
+  degreeType: string;
+}
 
 export interface Department {
   id: number;

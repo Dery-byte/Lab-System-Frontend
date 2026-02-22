@@ -56,13 +56,6 @@ const LoginPage = () => {
           <p className="mt-6 text-center text-gray-600">
             Don't have an account? <Link to="/register" className="text-blue-600 hover:text-blue-700 font-medium">Register here</Link>
           </p>
-
-          <div className="mt-6 p-4 bg-gray-50 rounded-lg text-xs text-gray-500">
-            <p className="font-medium mb-2">Test Credentials:</p>
-            <p><strong>Admin:</strong> admin@university.edu / admin123</p>
-            <p><strong>Lab Manager:</strong> labmanager@university.edu / manager123</p>
-            <p><strong>Student:</strong> john.doe@university.edu / password123</p>
-          </div>
         </div>
       </div>
     </div>

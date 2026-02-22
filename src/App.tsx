@@ -21,6 +21,8 @@ import AdminCoursesPage from './pages/admin/AdminCoursesPage';
 import AdminReportsPage from './pages/admin/AdminReportsPage';
 import SessionTimeSlotsPage from './pages/admin/SessionTimeSlotsPage';
 import AdminAttendancePage from './pages/admin/AdminAttendancePage';
+import AdminFacultyPage from './pages/admin/AdminFacultyPage';
+import AdminProgramPage from './pages/admin/AdminProgramPage';
 
 function App() {
   const { isAuthenticated, user } = useAuthStore();
@@ -46,6 +48,8 @@ function App() {
         <Route path="/admin/courses" element={<ProtectedRoute allowedRoles={['SUPER_ADMIN', 'LAB_MANAGER']}><Layout><AdminCoursesPage /></Layout></ProtectedRoute>} />
         <Route path="/admin/attendance" element={<ProtectedRoute allowedRoles={['SUPER_ADMIN', 'LAB_MANAGER']}><Layout><AdminAttendancePage /></Layout></ProtectedRoute>} />
         <Route path="/admin/reports" element={<ProtectedRoute allowedRoles={['SUPER_ADMIN', 'LAB_MANAGER']}><Layout><AdminReportsPage /></Layout></ProtectedRoute>} />
+        <Route path="/admin/faculty" element={<ProtectedRoute allowedRoles={['SUPER_ADMIN', 'LAB_MANAGER']}><Layout><AdminFacultyPage/></Layout></ProtectedRoute>} />
+        <Route path="/admin/programs" element={<ProtectedRoute allowedRoles={['SUPER_ADMIN', 'LAB_MANAGER']}><Layout><AdminProgramPage/></Layout></ProtectedRoute>} />
 
 
         <Route path="/" element={isAuthenticated ? <Navigate to={getDefaultPath()} replace /> : <Navigate to="/login" replace />} />
