@@ -451,6 +451,7 @@ export interface Department {
   headOfDepartment?: string;
   active: boolean;
   courseCount?: number;
+   studentId: "", 
 }
 
 export interface Program {
