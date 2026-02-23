@@ -1,90 +1,10 @@
-// import { useEffect, useState } from 'react';
-// import { ClipboardList, Search } from 'lucide-react';
-// import { toast } from 'react-hot-toast';
-// import { Card, CardContent, CardHeader, Badge, Loading, Select } from '../../components/ui/index';
-// import { labSessionService, registrationService } from '../../services';
-// import { Registration, LabSession } from '../../types';
-
-// const AdminRegistrationsPage = () => {
-//   const [sessions, setSessions] = useState<LabSession[]>([]);
-//   const [registrations, setRegistrations] = useState<Registration[]>([]);
-//   const [selectedSession, setSelectedSession] = useState<number | null>(null);
-//   const [loading, setLoading] = useState(true);
-
-//   useEffect(() => {
-//     labSessionService.getAll().then(setSessions).catch(() => toast.error('Failed to load')).finally(() => setLoading(false));
-//   }, []);
-
-//   useEffect(() => {
-//     if (selectedSession) {
-//       setLoading(true);
-//       registrationService.getBySession(selectedSession)
-//         .then(setRegistrations)
-//         .catch(() => toast.error('Failed to load registrations'))
-//         .finally(() => setLoading(false));
-//     }
-//   }, [selectedSession]);
-
-//   const getStatusBadge = (status: string, pos?: number) => {
-//     if (status === 'CONFIRMED') return <Badge variant="success">Confirmed</Badge>;
-//     if (status === 'WAITLISTED') return <Badge variant="warning">Waitlisted #{pos}</Badge>;
-//     return <Badge>{status}</Badge>;
-//   };
-
-//   if (loading && !selectedSession) return <Loading />;
-
-//   return (
-//     <div className="space-y-6">
-//       <div><h1 className="text-2xl font-bold text-gray-900">Registrations</h1></div>
-//       <Card><CardContent className="py-4">
-//         <Select label="Select Lab Session" value={selectedSession?.toString() || ''} onChange={e => setSelectedSession(e.target.value ? parseInt(e.target.value) : null)}
-//           options={sessions.map(s => ({ value: s.id, label: `${s.name} (${s.courseCode})` }))} placeholder="Choose a session..." />
-//       </CardContent></Card>
-
-//       {!selectedSession ? (
-//         <Card><CardContent className="py-12 text-center"><ClipboardList className="w-12 h-12 mx-auto mb-4 text-gray-300" /><h3 className="text-lg font-medium">Select a session</h3></CardContent></Card>
-//       ) : loading ? <Loading /> : registrations.length === 0 ? (
-//         <Card><CardContent className="py-12 text-center"><h3 className="text-lg font-medium">No registrations</h3></CardContent></Card>
-//       ) : (
-//         <Card>
-//           <CardHeader><h2 className="font-semibold">{registrations.length} Registrations</h2></CardHeader>
-//           <CardContent className="p-0">
-//             <table className="w-full">
-//               <thead className="bg-gray-50"><tr>
-//                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Student</th>
-//                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Program</th>
-//                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
-//                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Registered</th>
-//               </tr></thead>
-//               <tbody className="divide-y">
-//                 {registrations.map(reg => (
-//                   <tr key={reg.id} className="hover:bg-gray-50">
-//                     <td className="px-4 py-3"><p className="font-medium">{reg.studentName}</p><p className="text-sm text-gray-500">{reg.studentIdNumber}</p></td>
-//                     <td className="px-4 py-3 text-sm">{reg.programName || 'N/A'}</td>
-//                     <td className="px-4 py-3">{getStatusBadge(reg.status, reg.waitlistPosition)}</td>
-//                     <td className="px-4 py-3 text-sm text-gray-500">{new Date(reg.registeredAt).toLocaleDateString()}</td>
-//                   </tr>
-//                 ))}
-//               </tbody>
-//             </table>
-//           </CardContent>
-//         </Card>
-//       )}
-//     </div>
-//   );
-// };
-
-// export default AdminRegistrationsPage;
-
-
-
 import { useEffect, useState } from 'react';
-import { ClipboardList, Search, ChevronDown, Users, CheckCircle2, Clock4 } from 'lucide-react';
+import { ClipboardList, Search, ChevronDown, Users, CheckCircle2, Clock4, MapPin, Clock } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { labSessionService, registrationService } from '../../services';
 import { Registration, LabSession } from '../../types';
 
-// ─── Palette (mirrors the system from Courses / Programs) ────────────────────
+// ─── Palette ──────────────────────────────────────────────────────────────────
 
 const PALETTES = [
   { bg: '#dbeafe', accent: '#2563eb', soft: '#eff6ff' },
@@ -99,81 +19,257 @@ const PALETTES = [
   { bg: '#fef9c3', accent: '#ca8a04', soft: '#fefce8' },
 ];
 
-const getPalette = (code: string) => {
+const getPalette = (str: string) => {
   let h = 0;
-  for (let i = 0; i < code.length; i++) h = code.charCodeAt(i) + ((h << 5) - h);
+  for (let i = 0; i < str.length; i++) h = str.charCodeAt(i) + ((h << 5) - h);
   return PALETTES[Math.abs(h) % PALETTES.length];
 };
 
-// ─── Status pill ─────────────────────────────────────────────────────────────
+// ─── Helpers ─────────────────────────────────────────────────────────────────
+
+/** Format LocalTime (HH:mm:ss) → "9:00 AM" */
+const fmtTime = (t?: string) => {
+  if (!t) return '';
+  const [h, m] = t.split(':').map(Number);
+  const ampm = h >= 12 ? 'PM' : 'AM';
+  const hour = h % 12 || 12;
+  return `${hour}:${String(m).padStart(2, '0')} ${ampm}`;
+};
+
+/** Format Set<string> of days → "Mon · Wed · Fri" */
+const fmtDays = (days?: string[]) => {
+  if (!days || days.length === 0) return '';
+  const ORDER = ['MONDAY','TUESDAY','WEDNESDAY','THURSDAY','FRIDAY','SATURDAY','SUNDAY'];
+  const SHORT: Record<string, string> = {
+    MONDAY:'Mon', TUESDAY:'Tue', WEDNESDAY:'Wed',
+    THURSDAY:'Thu', FRIDAY:'Fri', SATURDAY:'Sat', SUNDAY:'Sun',
+  };
+  return [...days].sort((a, b) => ORDER.indexOf(a) - ORDER.indexOf(b))
+    .map(d => SHORT[d] ?? d).join(' · ');
+};
+
+/** Build readable schedule string from DTO fields */
+const buildSchedule = (reg: Registration): string => {
+  const days  = fmtDays(reg.sessionDays as unknown as string[]);
+  const start = fmtTime(reg.sessionStartTime as unknown as string);
+  const end   = fmtTime(reg.sessionEndTime   as unknown as string);
+  const parts = [days, start && end ? `${start} – ${end}` : start || end].filter(Boolean);
+  return parts.join('  ');
+};
+
+// ─── Types ────────────────────────────────────────────────────────────────────
+
+interface GroupEntry {
+  slotNumber:          number;
+  timeSlotDisplayName: string;
+  labRoom?:            string;
+  schedule:            string;
+  regs:                Registration[];
+}
+
+// ─── Sub-components ──────────────────────────────────────────────────────────
 
 const StatusPill = ({ status, position }: { status: string; position?: number }) => {
-  const confirmed = status === 'CONFIRMED';
+  const confirmed  = status === 'CONFIRMED';
   const waitlisted = status === 'WAITLISTED';
   return (
     <span style={{
       display: 'inline-flex', alignItems: 'center', gap: 5,
-      padding: '3px 10px', borderRadius: 999,
+      padding: '3px 9px', borderRadius: 999, whiteSpace: 'nowrap' as const,
       background: confirmed ? '#f0fdf4' : waitlisted ? '#fffbeb' : '#f8fafc',
       border: `1px solid ${confirmed ? '#bbf7d0' : waitlisted ? '#fde68a' : '#e2e8f0'}`,
       fontSize: 11, fontWeight: 600,
       color: confirmed ? '#15803d' : waitlisted ? '#b45309' : '#94a3b8',
-      fontFamily: "'Cabinet Grotesk', sans-serif",
-      letterSpacing: '0.03em', whiteSpace: 'nowrap' as const,
+      fontFamily: "'Cabinet Grotesk', sans-serif", letterSpacing: '0.03em',
     }}>
-      <span style={{
-        width: 5.5, height: 5.5, borderRadius: '50%', flexShrink: 0,
-        background: confirmed ? '#22c55e' : waitlisted ? '#f59e0b' : '#cbd5e1',
-      }} />
-      {confirmed ? 'Confirmed' : waitlisted ? `Waitlisted #${position}` : status}
+      <span style={{ width: 5, height: 5, borderRadius: '50%', flexShrink: 0, background: confirmed ? '#22c55e' : waitlisted ? '#f59e0b' : '#cbd5e1' }} />
+      {confirmed ? 'Confirmed' : waitlisted ? `Waitlist #${position}` : status}
     </span>
   );
 };
-
-// ─── Avatar ───────────────────────────────────────────────────────────────────
 
 const Avatar = ({ name }: { name: string }) => {
   const initials = name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
   const p = getPalette(name);
   return (
-    <div style={{
-      width: 34, height: 34, borderRadius: 9,
-      background: p.bg, border: `1.5px solid ${p.accent}25`,
-      display: 'flex', alignItems: 'center', justifyContent: 'center',
-      flexShrink: 0,
-    }}>
-      <span style={{ fontSize: 11.5, fontWeight: 700, color: p.accent, fontFamily: "'Cabinet Grotesk', sans-serif", letterSpacing: '-0.01em' }}>
-        {initials}
-      </span>
+    <div style={{ width: 32, height: 32, borderRadius: 8, background: p.bg, border: `1.5px solid ${p.accent}28`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+      <span style={{ fontSize: 11, fontWeight: 700, color: p.accent, fontFamily: "'Cabinet Grotesk', sans-serif", letterSpacing: '-0.01em' }}>{initials}</span>
     </div>
   );
 };
 
-// ─── Stat card ────────────────────────────────────────────────────────────────
-
 const StatCard = ({ icon, value, label, color }: { icon: React.ReactNode; value: number; label: string; color: string }) => (
-  <div style={{
-    background: '#fff', border: '1px solid #e8e5df', borderRadius: 12,
-    padding: '14px 18px', display: 'flex', alignItems: 'center', gap: 12, flex: 1,
-  }}>
-    <div style={{ width: 36, height: 36, borderRadius: 9, background: `${color}15`, display: 'flex', alignItems: 'center', justifyContent: 'center', color, flexShrink: 0 }}>
-      {icon}
-    </div>
+  <div style={{ background: '#fff', border: '1px solid #e8e5df', borderRadius: 12, padding: '13px 18px', display: 'flex', alignItems: 'center', gap: 12, flex: 1, minWidth: 120 }}>
+    <div style={{ width: 34, height: 34, borderRadius: 9, background: `${color}18`, display: 'flex', alignItems: 'center', justifyContent: 'center', color, flexShrink: 0 }}>{icon}</div>
     <div>
-      <p style={{ fontFamily: "'Fraunces', serif", fontWeight: 600, fontSize: 22, color: '#18181b', margin: 0, lineHeight: 1 }}>{value}</p>
-      <p style={{ fontSize: 11.5, color: '#94a3b8', margin: '3px 0 0', fontFamily: "'Cabinet Grotesk', sans-serif", fontWeight: 500 }}>{label}</p>
+      <p style={{ fontFamily: "'Fraunces', serif", fontWeight: 600, fontSize: 21, color: '#18181b', margin: 0, lineHeight: 1 }}>{value}</p>
+      <p style={{ fontSize: 11, color: '#94a3b8', margin: '3px 0 0', fontFamily: "'Cabinet Grotesk', sans-serif", fontWeight: 500 }}>{label}</p>
     </div>
   </div>
 );
 
-// ─── Form input styles ────────────────────────────────────────────────────────
+// ─── Group Block ──────────────────────────────────────────────────────────────
 
-const inp: React.CSSProperties = {
-  width: '100%', padding: '9px 12px', fontSize: 13.5,
-  border: '1.5px solid #e2e8f0', borderRadius: 8,
-  background: '#f8fafc', color: '#0f172a', outline: 'none',
-  fontFamily: "'Cabinet Grotesk', sans-serif",
-  boxSizing: 'border-box' as const, transition: 'all .15s',
+const GroupBlock = ({
+  entry, searchTerm, statusFilter, animDelay,
+}: {
+  entry: GroupEntry;
+  searchTerm: string;
+  statusFilter: 'all' | 'CONFIRMED' | 'WAITLISTED';
+  animDelay: string;
+}) => {
+  const [collapsed, setCollapsed] = useState(true);
+
+  // Palette keyed to the slot number so each slot has a distinct color
+  const gp = getPalette(`Group-${entry.slotNumber}`);
+
+  const filtered = entry.regs.filter(r => {
+    const q    = searchTerm.toLowerCase();
+    const hit  = r.studentName.toLowerCase().includes(q)
+      || r.studentIdNumber?.toLowerCase().includes(q)
+      || r.programName?.toLowerCase().includes(q);
+    const stat = statusFilter === 'all' ? true : r.status === statusFilter;
+    return hit && stat;
+  });
+
+  // Hide block entirely when a filter/search produces no matches
+  if (filtered.length === 0 && (searchTerm || statusFilter !== 'all')) return null;
+
+  const confirmed  = entry.regs.filter(r => r.status === 'CONFIRMED').length;
+  const waitlisted = entry.regs.filter(r => r.status === 'WAITLISTED').length;
+
+  const COL = '40px 1fr 130px 150px 120px 108px';
+
+  return (
+    <div style={{ background: '#fff', border: '1px solid #e8e5df', borderRadius: 16, overflow: 'hidden', animation: `arp-rise .4s ease ${animDelay} both` }}>
+
+      {/* ── Slot header ──────────────────────────────────────────────────── */}
+      <div
+        onClick={() => setCollapsed(c => !c)}
+        style={{
+          display: 'flex', alignItems: 'center', gap: 14,
+          padding: '15px 20px', cursor: 'pointer', userSelect: 'none' as const,
+          background: collapsed ? '#fafaf9' : gp.soft,
+          borderBottom: collapsed ? 'none' : `1px solid ${gp.accent}18`,
+          transition: 'background .15s',
+        }}
+      >
+        {/* Slot number badge */}
+        <div style={{ width: 44, height: 44, borderRadius: 11, flexShrink: 0, background: gp.bg, border: `1.5px solid ${gp.accent}28`, display: 'flex', flexDirection: 'column' as const, alignItems: 'center', justifyContent: 'center', gap: 0 }}>
+          <span style={{ fontFamily: "'Cabinet Grotesk', sans-serif", fontSize: 9, fontWeight: 700, color: gp.accent, letterSpacing: '0.06em', textTransform: 'uppercase' as const, lineHeight: 1 }}>GROUP</span>
+          <span style={{ fontFamily: "'Fraunces', serif", fontWeight: 700, fontSize: 19, color: gp.accent, lineHeight: 1 }}>{entry.slotNumber}</span>
+        </div>
+
+        {/* Info */}
+        <div style={{ flex: 1, minWidth: 0 }}>
+          {/* Display name */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' as const, marginBottom: entry.schedule || entry.labRoom ? 5 : 0 }}>
+            <span style={{ fontFamily: "'Fraunces', serif", fontWeight: 600, fontSize: 15.5, color: '#18181b' }}>
+              {entry.timeSlotDisplayName}
+            </span>
+          </div>
+
+          {/* Schedule + room meta */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' as const }}>
+            {entry.schedule && (
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 12, color: '#64748b', fontFamily: "'Cabinet Grotesk', sans-serif", fontWeight: 500 }}>
+                <Clock size={11} color="#94a3b8" strokeWidth={2} />
+                {entry.schedule}
+              </span>
+            )}
+            {entry.labRoom && (
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 12, color: '#64748b', fontFamily: "'Cabinet Grotesk', sans-serif", fontWeight: 500 }}>
+                <MapPin size={11} color="#94a3b8" strokeWidth={2} />
+                {entry.labRoom}
+              </span>
+            )}
+          </div>
+        </div>
+
+        {/* Confirmed + waitlist counts */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '3px 10px', borderRadius: 999, background: '#f0fdf4', border: '1px solid #bbf7d0', fontSize: 11, fontWeight: 700, color: '#15803d', fontFamily: "'Cabinet Grotesk', sans-serif" }}>
+            <span style={{ width: 5, height: 5, borderRadius: '50%', background: '#22c55e', flexShrink: 0 }} />{confirmed} confirmed
+          </span>
+          {waitlisted > 0 && (
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '3px 10px', borderRadius: 999, background: '#fffbeb', border: '1px solid #fde68a', fontSize: 11, fontWeight: 700, color: '#b45309', fontFamily: "'Cabinet Grotesk', sans-serif" }}>
+              <span style={{ width: 5, height: 5, borderRadius: '50%', background: '#f59e0b', flexShrink: 0 }} />+{waitlisted} waitlist
+            </span>
+          )}
+        </div>
+
+        {/* Chevron */}
+        <div style={{ color: '#94a3b8', flexShrink: 0, transition: 'transform .2s', transform: collapsed ? 'rotate(0deg)' : 'rotate(180deg)' }}>
+          <ChevronDown size={15} />
+        </div>
+      </div>
+
+      {/* ── Student rows ─────────────────────────────────────────────────── */}
+      {!collapsed && (
+        <>
+          {/* Column headers */}
+          <div style={{ display: 'grid', gridTemplateColumns: COL, padding: '8px 20px', background: '#fafaf9', borderBottom: '1px solid #f1f0ec' }}>
+            {['', 'Student', 'ID Number', 'Programme', 'Status', 'Registered'].map((h, i) => (
+              <span key={i} style={{ fontSize: 10, fontWeight: 700, color: '#b0bac6', letterSpacing: '0.09em', textTransform: 'uppercase' as const, fontFamily: "'Cabinet Grotesk', sans-serif" }}>{h}</span>
+            ))}
+          </div>
+
+          {filtered.map((reg, i) => (
+            <div
+              key={reg.id}
+              style={{
+                display: 'grid', gridTemplateColumns: COL,
+                padding: '11px 20px', alignItems: 'center',
+                borderBottom: i < filtered.length - 1 ? '1px solid #f5f4f0' : 'none',
+                transition: 'background .1s',
+                animation: `arp-fadein .2s ease ${i * 0.025}s both`,
+              }}
+              onMouseEnter={e => (e.currentTarget.style.background = '#fafaf9')}
+              onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+            >
+              <Avatar name={reg.studentName} />
+
+              {/* Student name */}
+              <div style={{ minWidth: 0, paddingRight: 8 }}>
+                <div style={{ fontFamily: "'Fraunces', serif", fontWeight: 600, fontSize: 14, color: '#18181b', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const }}>
+                  {reg.studentName}
+                </div>
+                {reg.studentEmail && (
+                  <div style={{ fontSize: 11, color: '#94a3b8', fontFamily: "'Cabinet Grotesk', sans-serif", overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const, marginTop: 1 }}>
+                    {reg.studentEmail}
+                  </div>
+                )}
+              </div>
+
+              {/* Student ID */}
+              <span style={{ fontSize: 12, color: '#64748b', fontFamily: "'Cabinet Grotesk', sans-serif", fontWeight: 500, background: '#f1f5f9', padding: '2px 8px', borderRadius: 5, display: 'inline-block', width: 'fit-content' }}>
+                {reg.studentIdNumber || '—'}
+              </span>
+
+              {/* Programme */}
+              <span style={{ fontSize: 12.5, color: '#475569', fontFamily: "'Cabinet Grotesk', sans-serif", overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const, paddingRight: 8 }}>
+                {reg.programName ?? <span style={{ color: '#cbd5e1' }}>N/A</span>}
+              </span>
+
+              {/* Status */}
+              <StatusPill status={reg.status as string} position={reg.waitlistPosition} />
+
+              {/* Date registered */}
+              <span style={{ fontSize: 11.5, color: '#94a3b8', fontFamily: "'Cabinet Grotesk', sans-serif" }}>
+                {new Date(reg.registeredAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
+              </span>
+            </div>
+          ))}
+
+          {filtered.length === 0 && (
+            <div style={{ padding: '24px 20px', textAlign: 'center', color: '#94a3b8', fontSize: 13, fontFamily: "'Cabinet Grotesk', sans-serif" }}>
+              No students match this filter in this group
+            </div>
+          )}
+        </>
+      )}
+    </div>
+  );
 };
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
@@ -186,6 +282,14 @@ const AdminRegistrationsPage = () => {
   const [regLoading, setRegLoading]           = useState(false);
   const [searchTerm, setSearchTerm]           = useState('');
   const [statusFilter, setStatusFilter]       = useState<'all' | 'CONFIRMED' | 'WAITLISTED'>('all');
+
+  const inp: React.CSSProperties = {
+    width: '100%', padding: '9px 12px', fontSize: 13.5,
+    border: '1.5px solid #e2e8f0', borderRadius: 8,
+    background: '#f8fafc', color: '#0f172a', outline: 'none',
+    fontFamily: "'Cabinet Grotesk', sans-serif",
+    boxSizing: 'border-box' as const, transition: 'all .15s',
+  };
 
   useEffect(() => {
     labSessionService.getAll()
@@ -203,18 +307,28 @@ const AdminRegistrationsPage = () => {
       .finally(() => setRegLoading(false));
   }, [selectedSession]);
 
-  const selectedSessionObj = sessions.find(s => s.id === selectedSession);
-  const palette = selectedSessionObj ? getPalette(selectedSessionObj.courseCode || selectedSessionObj.name) : null;
+  // ── Group by slotNumber (from RegistrationDTO) ────────────────────────────
+  const groupMap = new Map<number, GroupEntry>();
+  for (const reg of registrations) {
+    // slotNumber is the primary grouping key; fallback to 0 if unassigned
+    const key = reg.slotNumber ?? 0;
+    if (!groupMap.has(key)) {
+      groupMap.set(key, {
+        slotNumber:          reg.slotNumber   ?? 0,
+        timeSlotDisplayName: reg.timeSlotDisplayName ?? `Slot ${reg.slotNumber ?? 0}`,
+        labRoom:             reg.labRoom,
+        schedule:            buildSchedule(reg),
+        regs:                [],
+      });
+    }
+    groupMap.get(key)!.regs.push(reg);
+  }
+  const groupEntries = Array.from(groupMap.values()).sort((a, b) => a.slotNumber - b.slotNumber);
 
-  const confirmed  = registrations.filter(r => r.status === 'CONFIRMED').length;
-  const waitlisted = registrations.filter(r => r.status === 'WAITLISTED').length;
-
-  const filtered = registrations.filter(r => {
-    const q = searchTerm.toLowerCase();
-    const m = r.studentName.toLowerCase().includes(q) || r.studentIdNumber?.toLowerCase().includes(q) || r.programName?.toLowerCase().includes(q);
-    const s = statusFilter === 'all' ? true : r.status === statusFilter;
-    return m && s;
-  });
+  const selectedSessionObj  = sessions.find(s => s.id === selectedSession);
+  const palette             = selectedSessionObj ? getPalette(selectedSessionObj.courseCode || selectedSessionObj.name) : null;
+  const totalConfirmed      = registrations.filter(r => r.status === 'CONFIRMED').length;
+  const totalWaitlisted     = registrations.filter(r => r.status === 'WAITLISTED').length;
 
   if (loading) return (
     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '60vh', gap: 12 }}>
@@ -230,58 +344,17 @@ const AdminRegistrationsPage = () => {
         @import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,400;0,9..144,600;0,9..144,700;1,9..144,300&family=Cabinet+Grotesk:wght@400;500;600;700;800&display=swap');
 
         @keyframes arp-spin   { to { transform: rotate(360deg); } }
-        @keyframes arp-rise   { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes arp-rise   { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: translateY(0); } }
         @keyframes arp-fadein { from { opacity: 0; } to { opacity: 1; } }
 
         .arp-page { font-family: 'Cabinet Grotesk', sans-serif; background: #f5f4f0; min-height: 100vh; padding: 44px 40px; }
-        .arp-wrap { max-width: 1100px; margin: 0 auto; animation: arp-rise .35s ease both; }
+        .arp-wrap { max-width: 1140px; margin: 0 auto; animation: arp-rise .35s ease both; }
 
-        /* Session selector card */
         .arp-selector {
-          background: #fff;
-          border: 1px solid #e8e5df;
-          border-radius: 14px;
-          padding: 20px 22px;
-          display: flex;
-          align-items: center;
-          gap: 16px;
-          flex-wrap: wrap;
+          background: #fff; border: 1px solid #e8e5df; border-radius: 14px;
+          padding: 18px 22px; display: flex; align-items: center; gap: 16px; flex-wrap: wrap;
         }
 
-        /* Table */
-        .arp-table-wrap {
-          background: #fff;
-          border: 1px solid #e8e5df;
-          border-radius: 14px;
-          overflow: hidden;
-          animation: arp-fadein .2s ease;
-        }
-
-        .arp-table { width: 100%; border-collapse: collapse; }
-
-        .arp-thead th {
-          padding: 10px 16px;
-          text-align: left;
-          font-size: 10.5px;
-          font-weight: 700;
-          color: #94a3b8;
-          letter-spacing: 0.08em;
-          text-transform: uppercase;
-          font-family: 'Cabinet Grotesk', sans-serif;
-          background: #fafaf9;
-          border-bottom: 1px solid #f1f0ec;
-        }
-
-        .arp-tr {
-          border-bottom: 1px solid #f5f4f0;
-          transition: background .1s;
-        }
-        .arp-tr:last-child { border-bottom: none; }
-        .arp-tr:hover { background: #fafaf9; }
-
-        .arp-td { padding: 12px 16px; vertical-align: middle; }
-
-        /* Filter chips */
         .arp-chip {
           padding: 5px 13px; border-radius: 999px; font-size: 11.5px; font-weight: 600;
           border: 1px solid #e2e8f0; cursor: pointer; background: #fff; color: #64748b;
@@ -290,22 +363,18 @@ const AdminRegistrationsPage = () => {
         .arp-chip:hover:not(.arp-chip-on) { border-color: #a5b4fc; color: #4f46e5; }
         .arp-chip-on { background: #18181b; color: #fff; border-color: #18181b; }
 
-        /* Empty state */
         .arp-empty {
-          display: flex; flex-direction: column; align-items: center;
-          justify-content: center; gap: 10px; padding: 80px 40px;
-          border: 1.5px dashed #e2e8f0; border-radius: 16px; text-align: center;
+          display: flex; flex-direction: column; align-items: center; justify-content: center;
+          gap: 10px; padding: 80px 40px; border: 1.5px dashed #e2e8f0; border-radius: 16px; text-align: center;
         }
 
-        @media (max-width: 640px) {
-          .arp-page { padding: 24px 16px; }
-        }
+        @media (max-width: 860px) { .arp-page { padding: 24px 16px; } }
       `}</style>
 
       <div className="arp-page">
         <div className="arp-wrap">
 
-          {/* ── Header ───────────────────────────────────────────────────────── */}
+          {/* ── Header ─────────────────────────────────────────────────────── */}
           <div style={{ marginBottom: 28 }}>
             <p style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', color: '#94a3b8', margin: '0 0 5px', fontFamily: "'Cabinet Grotesk', sans-serif" }}>
               Admin · Registrations
@@ -314,20 +383,20 @@ const AdminRegistrationsPage = () => {
               Registrations
             </h1>
             <p style={{ fontSize: 13.5, color: '#94a3b8', marginTop: 6, fontWeight: 500 }}>
-              View student registrations by lab session
+              Students organized by time group
             </p>
           </div>
 
-          {/* ── Session Selector ─────────────────────────────────────────────── */}
+          {/* ── Session Selector ───────────────────────────────────────────── */}
           <div className="arp-selector" style={{ marginBottom: 20 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
-              <div style={{ width: 36, height: 36, borderRadius: 9, background: palette ? palette.bg : '#f1f5f9', border: `1.5px solid ${palette ? palette.accent + '30' : '#e2e8f0'}`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <div style={{ width: 38, height: 38, borderRadius: 10, background: palette ? palette.bg : '#f1f5f9', border: `1.5px solid ${palette ? palette.accent + '30' : '#e2e8f0'}`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                 <ClipboardList size={16} color={palette ? palette.accent : '#94a3b8'} />
               </div>
               <div>
-                <p style={{ fontSize: 11, fontWeight: 600, color: '#94a3b8', margin: 0, letterSpacing: '0.06em', textTransform: 'uppercase', fontFamily: "'Cabinet Grotesk', sans-serif" }}>Lab Session</p>
-                {selectedSessionObj && (
-                  <p style={{ fontSize: 12, fontWeight: 600, color: palette?.accent, margin: '1px 0 0', fontFamily: "'Cabinet Grotesk', sans-serif" }}>
+                <p style={{ fontSize: 10.5, fontWeight: 700, color: '#94a3b8', margin: 0, letterSpacing: '0.07em', textTransform: 'uppercase', fontFamily: "'Cabinet Grotesk', sans-serif" }}>Lab Session</p>
+                {selectedSessionObj && palette && (
+                  <p style={{ fontSize: 12, fontWeight: 700, color: palette.accent, margin: '1px 0 0', fontFamily: "'Cabinet Grotesk', sans-serif", letterSpacing: '0.04em' }}>
                     {selectedSessionObj.courseCode}
                   </p>
                 )}
@@ -337,51 +406,65 @@ const AdminRegistrationsPage = () => {
             <div style={{ position: 'relative', flex: 1, minWidth: 240 }}>
               <select
                 value={selectedSession?.toString() || ''}
-                onChange={e => { setSearchTerm(''); setStatusFilter('all'); setSelectedSession(e.target.value ? parseInt(e.target.value) : null); }}
-                style={{ ...inp, paddingRight: 36, cursor: 'pointer', appearance: 'none' }}
+                onChange={e => {
+                  setSearchTerm(''); setStatusFilter('all'); setRegistrations([]);
+                  setSelectedSession(e.target.value ? parseInt(e.target.value) : null);
+                }}
+                style={{ ...inp, paddingRight: 36, cursor: 'pointer', appearance: 'none' } as React.CSSProperties}
                 onFocus={e => { e.target.style.borderColor = '#6366f1'; e.target.style.background = '#fff'; e.target.style.boxShadow = '0 0 0 3px #eef2ff'; }}
                 onBlur={e => { e.target.style.borderColor = '#e2e8f0'; e.target.style.background = '#f8fafc'; e.target.style.boxShadow = 'none'; }}
               >
                 <option value="">Choose a session…</option>
-                {sessions.map(s => (
-                  <option key={s.id} value={s.id}>{s.name} ({s.courseCode})</option>
-                ))}
+                {sessions.map(s => <option key={s.id} value={s.id}>{s.name} ({s.courseCode})</option>)}
               </select>
               <ChevronDown size={13} style={{ position: 'absolute', right: 11, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none', color: '#94a3b8' }} />
             </div>
+
+            {selectedSession && !regLoading && registrations.length > 0 && (
+              <span style={{ fontSize: 12, color: '#94a3b8', fontFamily: "'Cabinet Grotesk', sans-serif", fontWeight: 600, flexShrink: 0 }}>
+                {groupEntries.length} Group{groupEntries.length !== 1 ? 's' : ''} · {registrations.length} students
+              </span>
+            )}
           </div>
 
-          {/* ── No session selected ──────────────────────────────────────────── */}
+          {/* ── States ─────────────────────────────────────────────────────── */}
           {!selectedSession ? (
             <div className="arp-empty">
               <div style={{ width: 52, height: 52, background: '#f1f5f9', borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 <ClipboardList size={24} color="#cbd5e1" />
               </div>
               <p style={{ fontFamily: "'Fraunces', serif", fontSize: 20, fontWeight: 600, color: '#18181b', margin: 0 }}>No session selected</p>
-              <p style={{ fontSize: 13.5, color: '#94a3b8', margin: 0 }}>Choose a lab session above to view its registrations</p>
+              <p style={{ fontSize: 13.5, color: '#94a3b8', margin: 0 }}>Choose a lab session above to view students by time group</p>
             </div>
 
           ) : regLoading ? (
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 12, padding: '80px 0' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12, padding: '80px 0' }}>
               <div style={{ width: 24, height: 24, border: '2.5px solid #e2e8f0', borderTopColor: '#6366f1', borderRadius: '50%', animation: 'arp-spin .75s linear infinite' }} />
               <span style={{ fontSize: 13, color: '#94a3b8', fontFamily: "'Cabinet Grotesk', sans-serif" }}>Loading registrations…</span>
             </div>
 
+          ) : registrations.length === 0 ? (
+            <div className="arp-empty">
+              <p style={{ fontFamily: "'Fraunces', serif", fontSize: 18, fontWeight: 600, color: '#18181b', margin: 0 }}>No registrations yet</p>
+              <p style={{ fontSize: 13, color: '#94a3b8', margin: 0 }}>No students have registered for this session</p>
+            </div>
+
           ) : (
             <>
-              {/* ── Stats row ─────────────────────────────────────────────────── */}
+              {/* Stats */}
               <div style={{ display: 'flex', gap: 10, marginBottom: 16, flexWrap: 'wrap' }}>
-                <StatCard icon={<Users size={17} />}        value={registrations.length} label="Total registered"  color="#6366f1" />
-                <StatCard icon={<CheckCircle2 size={17} />} value={confirmed}            label="Confirmed"         color="#16a34a" />
-                <StatCard icon={<Clock4 size={17} />}       value={waitlisted}           label="On waitlist"       color="#d97706" />
+                <StatCard icon={<Users size={16} />}         value={registrations.length} label="Total students"  color="#6366f1" />
+                <StatCard icon={<CheckCircle2 size={16} />}  value={totalConfirmed}        label="Confirmed"       color="#16a34a" />
+                <StatCard icon={<Clock4 size={16} />}        value={totalWaitlisted}       label="Waitlisted"      color="#d97706" />
+                <StatCard icon={<ClipboardList size={16} />} value={groupEntries.length}   label="Groups"      color="#0284c7" />
               </div>
 
-              {/* ── Search + filter ───────────────────────────────────────────── */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14, flexWrap: 'wrap' }}>
+              {/* Search + filter */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 18, flexWrap: 'wrap' }}>
                 <div style={{ position: 'relative', flex: 1, minWidth: 200, maxWidth: 340 }}>
                   <Search size={13} style={{ position: 'absolute', left: 11, top: '50%', transform: 'translateY(-50%)', color: '#94a3b8', pointerEvents: 'none' }} />
                   <input
-                    type="text" placeholder="Search student, ID, program…"
+                    type="text" placeholder="Search across all groups…"
                     value={searchTerm} onChange={e => setSearchTerm(e.target.value)}
                     style={{ ...inp, paddingLeft: 32, borderRadius: 9, fontSize: 13 }}
                     onFocus={e => { e.target.style.borderColor = '#6366f1'; e.target.style.background = '#fff'; e.target.style.boxShadow = '0 0 0 3px #eef2ff'; }}
@@ -395,81 +478,20 @@ const AdminRegistrationsPage = () => {
                     </button>
                   ))}
                 </div>
-                <span style={{ marginLeft: 'auto', fontSize: 12, color: '#94a3b8', fontFamily: "'Cabinet Grotesk', sans-serif", fontWeight: 500 }}>
-                  {filtered.length} of {registrations.length}
-                </span>
               </div>
 
-              {/* ── Table or empty ────────────────────────────────────────────── */}
-              {filtered.length === 0 ? (
-                <div className="arp-empty" style={{ border: '1.5px dashed #e2e8f0', borderRadius: 14 }}>
-                  <p style={{ fontFamily: "'Fraunces', serif", fontSize: 18, fontWeight: 600, color: '#18181b', margin: 0 }}>No results</p>
-                  <p style={{ fontSize: 13, color: '#94a3b8', margin: 0 }}>Try a different search or filter</p>
-                </div>
-              ) : (
-                <div className="arp-table-wrap">
-                  {/* Session title bar */}
-                  {selectedSessionObj && palette && (
-                    <div style={{ padding: '13px 18px', borderBottom: '1px solid #f1f0ec', display: 'flex', alignItems: 'center', gap: 10, background: palette.soft }}>
-                      <div style={{ width: 6, height: 6, borderRadius: '50%', background: palette.accent, flexShrink: 0 }} />
-                      <span style={{ fontFamily: "'Fraunces', serif", fontWeight: 600, fontSize: 15, color: '#18181b' }}>
-                        {selectedSessionObj.name}
-                      </span>
-                      <span style={{ fontSize: 11.5, color: palette.accent, fontWeight: 600, fontFamily: "'Cabinet Grotesk', sans-serif", letterSpacing: '0.04em' }}>
-                        {selectedSessionObj.courseCode}
-                      </span>
-                      <span style={{ marginLeft: 'auto', fontSize: 12, color: '#94a3b8', fontFamily: "'Cabinet Grotesk', sans-serif" }}>
-                        {filtered.length} registration{filtered.length !== 1 ? 's' : ''}
-                      </span>
-                    </div>
-                  )}
-
-                  <table className="arp-table">
-                    <thead className="arp-thead">
-                      <tr>
-                        <th style={{ width: 44 }}></th>
-                        <th>Student</th>
-                        <th>ID Number</th>
-                        <th>Program</th>
-                        <th>Status</th>
-                        <th>Registered</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {filtered.map((reg, i) => (
-                        <tr key={reg.id} className="arp-tr" style={{ animationDelay: `${i * 0.03}s` }}>
-                          <td className="arp-td" style={{ paddingRight: 0 }}>
-                            <Avatar name={reg.studentName} />
-                          </td>
-                          <td className="arp-td">
-                            <span style={{ fontFamily: "'Fraunces', serif", fontWeight: 600, fontSize: 14.5, color: '#18181b' }}>
-                              {reg.studentName}
-                            </span>
-                          </td>
-                          <td className="arp-td">
-                            <span style={{ fontSize: 12.5, color: '#64748b', fontFamily: "'Cabinet Grotesk', sans-serif", fontWeight: 500, background: '#f1f5f9', padding: '2px 8px', borderRadius: 5 }}>
-                              {reg.studentIdNumber || '—'}
-                            </span>
-                          </td>
-                          <td className="arp-td">
-                            <span style={{ fontSize: 12.5, color: '#475569', fontFamily: "'Cabinet Grotesk', sans-serif" }}>
-                              {reg.programName || <span style={{ color: '#cbd5e1' }}>N/A</span>}
-                            </span>
-                          </td>
-                          <td className="arp-td">
-                            <StatusPill status={reg.status} position={reg.waitlistPosition} />
-                          </td>
-                          <td className="arp-td">
-                            <span style={{ fontSize: 12, color: '#94a3b8', fontFamily: "'Cabinet Grotesk', sans-serif" }}>
-                              {new Date(reg.registeredAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
-                            </span>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
+              {/* Slot blocks */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                {groupEntries.map((entry, idx) => (
+                  <GroupBlock
+                    key={entry.slotNumber}
+                    entry={entry}
+                    searchTerm={searchTerm}
+                    statusFilter={statusFilter}
+                    animDelay={`${idx * 0.07}s`}
+                  />
+                ))}
+              </div>
             </>
           )}
         </div>
@@ -479,3 +501,5 @@ const AdminRegistrationsPage = () => {
 };
 
 export default AdminRegistrationsPage;
+
+

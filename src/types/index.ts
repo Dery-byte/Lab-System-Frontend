@@ -247,6 +247,7 @@ export interface Registration {
   sessionDays?: string[];
   durationWeeks?: number;
   instructions?: string;
+  timeSlotDisplayName:string;
   status: RegistrationStatus;
   waitlistPosition?: number;
   registeredAt: string;
