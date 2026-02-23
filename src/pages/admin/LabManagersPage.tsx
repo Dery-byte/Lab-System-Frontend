@@ -1,33 +1,35 @@
+
 // import { useEffect, useState } from 'react';
 // import { Plus, Edit, Trash2, Search, UserCog, CheckCircle, Mail, Hash, Building, Shield } from 'lucide-react';
 // import { toast } from 'react-hot-toast';
-// import { Loading, Modal, Input, Select } from '../../components/ui';
+// import { Loading, Modal } from '../../components/ui';
 // import api from '../../services/api';
-// import { User, DEPARTMENT_OPTIONS } from '../../types';
+// import { User } from '../../types';
 // import { departmentService } from '../../services/departmentService';
 // import { Department } from '../../types';
 
+// // ─── Request shape — matches the fixed backend DTO ───────────────────────────
+
 // interface CreateLabManagerRequest {
-//   studentId: string;
-//   email: string;
-//   password: string;
-//   firstName: string;
-//   lastName: string;
-//   department: string;
-//   departmentId:string;
+//   studentId:    string;
+//   email:        string;
+//   password:     string;
+//   firstName:    string;
+//   lastName:     string;
+//   departmentId: number | '';   // Long on the backend; '' = unset in form
 // }
 
 // // ─── Deterministic avatar colour from name ────────────────────────────────────
 
 // const AVATAR_PALETTES = [
-//   { from: '#3b82f6', to: '#6366f1' }, // blue → indigo
-//   { from: '#10b981', to: '#059669' }, // emerald
-//   { from: '#f59e0b', to: '#d97706' }, // amber
-//   { from: '#8b5cf6', to: '#7c3aed' }, // violet
-//   { from: '#ef4444', to: '#dc2626' }, // red
-//   { from: '#06b6d4', to: '#0891b2' }, // cyan
-//   { from: '#ec4899', to: '#db2777' }, // pink
-//   { from: '#84cc16', to: '#65a30d' }, // lime
+//   { from: '#3b82f6', to: '#6366f1' },
+//   { from: '#10b981', to: '#059669' },
+//   { from: '#f59e0b', to: '#d97706' },
+//   { from: '#8b5cf6', to: '#7c3aed' },
+//   { from: '#ef4444', to: '#dc2626' },
+//   { from: '#06b6d4', to: '#0891b2' },
+//   { from: '#ec4899', to: '#db2777' },
+//   { from: '#84cc16', to: '#65a30d' },
 // ];
 
 // const avatarPalette = (name: string) => {
@@ -93,61 +95,71 @@
 //   </div>
 // );
 
-// const TextInput = ({
-//   type = 'text', value, onChange, placeholder,
-// }: { type?: string; value: string; onChange: (v: string) => void; placeholder?: string }) => (
+// const textInputCls = `w-full px-4 py-2.5 text-sm text-slate-800 bg-slate-50 border border-slate-200 rounded-xl
+//   focus:outline-none focus:ring-2 focus:ring-blue-200 focus:border-blue-400 focus:bg-white
+//   placeholder:text-slate-300 transition-all duration-150`;
+
+// const TextInput = ({ type = 'text', value, onChange, placeholder }: {
+//   type?: string; value: string; onChange: (v: string) => void; placeholder?: string;
+// }) => (
 //   <input
-//     type={type}
-//     value={value}
-//     onChange={e => onChange(e.target.value)}
-//     placeholder={placeholder}
-//     className="w-full px-4 py-2.5 text-sm text-slate-800 bg-slate-50 border border-slate-200 rounded-xl
-//       focus:outline-none focus:ring-2 focus:ring-blue-200 focus:border-blue-400 focus:bg-white
-//       placeholder:text-slate-300 transition-all duration-150"
+//     type={type} value={value} onChange={e => onChange(e.target.value)}
+//     placeholder={placeholder} className={textInputCls}
 //   />
 // );
+
+// // ─── Department Select ────────────────────────────────────────────────────────
+
+// const DeptSelect = ({
+//   departments, value, onChange,
+// }: {
+//   departments: Department[];
+//   value: number | '';
+//   onChange: (id: number | '') => void;
+// }) => (
+//   <div className="relative">
+//     <select
+//       value={value}
+//       onChange={e => onChange(e.target.value === '' ? '' : Number(e.target.value))}
+//       className={`${textInputCls} appearance-none pr-10 cursor-pointer`}
+//     >
+//       <option value="">Select department…</option>
+//       {departments.map(d => (
+//         <option key={d.id} value={d.id}>{d.name}</option>
+//       ))}
+//     </select>
+//     <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
+//       <svg className="w-4 h-4" viewBox="0 0 20 20" fill="currentColor">
+//         <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
+//       </svg>
+//     </div>
+//   </div>
+// );
+
+// // ─── Blank form ───────────────────────────────────────────────────────────────
+
+// const BLANK: CreateLabManagerRequest = {
+//   studentId: '', email: '', password: '',
+//   firstName: '', lastName: '', departmentId: '',
+// };
 
 // // ─── Main Page ────────────────────────────────────────────────────────────────
 
 // const LabManagersPage = () => {
 //   const [labManagers, setLabManagers] = useState<User[]>([]);
-//   const [loading, setLoading] = useState(true);
-//   const [searchTerm, setSearchTerm] = useState('');
+//   const [loading, setLoading]         = useState(true);
+//   const [searchTerm, setSearchTerm]   = useState('');
 //   const [isModalOpen, setIsModalOpen] = useState(false);
 //   const [editingManager, setEditingManager] = useState<User | null>(null);
-//   const [isSaving, setIsSaving] = useState(false);
-//   const [formData, setFormData] = useState<CreateLabManagerRequest>({
-//     studentId: '', email: '', password: '', firstName: '', lastName: '', departmentId:'', department: '',
-
-//   });
-
+//   const [isSaving, setIsSaving]       = useState(false);
+//   const [formData, setFormData]       = useState<CreateLabManagerRequest>(BLANK);
 //   const [departments, setDepartments] = useState<Department[]>([]);
-//   // useEffect(() => {
-//   //   const loadDepartments = async () => {
-//   //     const data = await departmentService.getAll();
-//   //     setDepartments(data);
-//   //   };
-//   //   loadDepartments();
-//   // }, []);
-
-
-//   // useEffect(() => { fetchLabManagers(); }, []);
 
 //   useEffect(() => {
-//     // Fetch lab managers
 //     fetchLabManagers();
-
-//     // Fetch departments
-//     const loadDepartments = async () => {
-//       try {
-//         const data = await departmentService.getAll();
-//         setDepartments(data);
-//       } catch (err) {
-//         console.error("Failed to load departments", err);
-//       }
-//     };
-
-//     loadDepartments();
+//     departmentService.getAll()
+//       .then(setDepartments)
+//       .catch(() => console.error('Failed to load departments'));
 //   }, []);
 
 //   const fetchLabManagers = async () => {
@@ -158,17 +170,27 @@
 //     finally { setLoading(false); }
 //   };
 
+//   const fd = (patch: Partial<CreateLabManagerRequest>) =>
+//     setFormData(prev => ({ ...prev, ...patch }));
+
+//   // ── Open modal for ADD ──────────────────────────────────────────────────────
 //   const handleAdd = () => {
 //     setEditingManager(null);
-//     setFormData({ studentId: '', email: '', password: '', firstName: '', lastName: '', departmentId:'', department: '' });
+//     setFormData(BLANK);
 //     setIsModalOpen(true);
 //   };
 
+//   // ── Open modal for EDIT — pre-fill departmentId from manager.departmentId ──
 //   const handleEdit = (manager: User) => {
 //     setEditingManager(manager);
 //     setFormData({
-//       studentId: manager.studentId, email: manager.email, password: '',
-//       firstName: manager.firstName, lastName: manager.lastName, departmentId: manager.departmentId ? manager.departmentId.toString() : '', department: manager.department ?? '',
+//       studentId:    manager.studentId  ?? '',
+//       email:        manager.email      ?? '',
+//       password:     '',                         // never pre-fill password
+//       firstName:    manager.firstName  ?? '',
+//       lastName:     manager.lastName   ?? '',
+//       // manager.departmentId comes from UserDTO — the numeric FK
+//       departmentId: manager.departmentId ? Number(manager.departmentId) : '',
 //     });
 //     setIsModalOpen(true);
 //   };
@@ -192,19 +214,22 @@
 //   };
 
 //   const handleSubmit = async () => {
-//     if (!formData.studentId || !formData.email || !formData.firstName || !formData.lastName || !formData.department) {
-//       toast.error('Please fill in all required fields'); return;
+//     if (!formData.studentId || !formData.email || !formData.firstName || !formData.lastName || formData.departmentId === '') {
+//       toast.error('Please fill in all required fields including Department'); return;
 //     }
 //     if (!editingManager && !formData.password) {
 //       toast.error('Password is required for new lab managers'); return;
 //     }
 //     setIsSaving(true);
 //     try {
+//       // Payload always sends departmentId as number — matches backend Long
+//       const payload = { ...formData, departmentId: Number(formData.departmentId) };
+
 //       if (editingManager) {
-//         await api.put(`/admin/lab-managers/${editingManager.id}`, formData);
+//         await api.put(`/admin/lab-managers/${editingManager.id}`, payload);
 //         toast.success('Lab manager updated');
 //       } else {
-//         await api.post('/admin/create-lab-manager', formData);
+//         await api.post('/admin/create-lab-manager', payload);
 //         toast.success('Lab manager created');
 //       }
 //       setIsModalOpen(false);
@@ -214,13 +239,22 @@
 //     } finally { setIsSaving(false); }
 //   };
 
+//   // ── Resolve department display name from loaded list (fallback to stored string) ──
+//   const deptName = (manager: User) => {
+//     if (departments.length > 0 && manager.departmentId) {
+//       const found = departments.find(d => d.id === Number(manager.departmentId));
+//       if (found) return found.name;
+//     }
+//     return manager.departmentName ?? manager.department ?? '—';
+//   };
+
 //   const filtered = labManagers.filter(m =>
 //     m.fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
 //     m.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-//     (m.department ?? '').toLowerCase().includes(searchTerm.toLowerCase())
+//     deptName(m).toLowerCase().includes(searchTerm.toLowerCase())
 //   );
 
-//   const activeCount = labManagers.filter(m => m.enabled).length;
+//   const activeCount   = labManagers.filter(m => m.enabled).length;
 //   const inactiveCount = labManagers.filter(m => !m.enabled).length;
 
 //   if (loading) return <Loading text="Loading lab managers..." />;
@@ -241,15 +275,12 @@
 //           </div>
 //         </div>
 
-//         {/* Search + Add in one row */}
 //         <div className="flex items-center gap-3">
 //           <div className="relative">
 //             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
 //             <input
-//               type="text"
-//               placeholder="Search by name, email, dept…"
-//               value={searchTerm}
-//               onChange={e => setSearchTerm(e.target.value)}
+//               type="text" placeholder="Search by name, email, dept…"
+//               value={searchTerm} onChange={e => setSearchTerm(e.target.value)}
 //               className="w-64 pl-9 pr-4 py-2 text-sm bg-white border border-slate-200 rounded-xl
 //                 focus:outline-none focus:ring-2 focus:ring-blue-200 focus:border-blue-400 transition-all duration-150
 //                 placeholder:text-slate-300"
@@ -279,8 +310,6 @@
 //           )}
 //         </div>
 //       ) : (
-
-//         // /* ── Manager grid ────────────────────────────────────────────────── */}
 //         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
 //           {filtered.map((manager, idx) => (
 //             <div
@@ -289,21 +318,17 @@
 //                 ${manager.enabled ? 'border-slate-200/80' : 'border-slate-200/50 opacity-70'}`}
 //               style={{ animationDelay: `${idx * 40}ms` }}
 //             >
-//               {/* Card top accent line — colour-matched to avatar */}
+//               {/* Colour accent line */}
 //               <div className="h-[3px] w-full"
 //                 style={{ background: `linear-gradient(90deg, ${avatarPalette(manager.fullName || 'X').from}, ${avatarPalette(manager.fullName || 'X').to})` }}
 //               />
 
 //               <div className="p-5">
-//                 {/* Identity row */}
 //                 <div className="flex items-start gap-3.5">
 //                   <Avatar name={manager.fullName || 'User'} muted={!manager.enabled} size={48} />
-
 //                   <div className="flex-1 min-w-0">
 //                     <div className="flex items-center gap-2 flex-wrap">
-//                       <h3 className="text-[15px] font-bold text-slate-900 leading-tight truncate">
-//                         {manager.fullName}
-//                       </h3>
+//                       <h3 className="text-[15px] font-bold text-slate-900 leading-tight truncate">{manager.fullName}</h3>
 //                       <StatusDot active={!!manager.enabled} />
 //                     </div>
 //                     <p className="text-[11px] font-bold uppercase tracking-widest text-slate-400 mt-0.5">
@@ -312,14 +337,13 @@
 //                   </div>
 //                 </div>
 
-//                 {/* Details */}
 //                 <div className="mt-4 space-y-1.5">
-//                   <InfoRow icon={<Mail className="w-3.5 h-3.5" />} value={manager.email} />
-//                   <InfoRow icon={<Hash className="w-3.5 h-3.5" />} value={manager.studentId} />
-//                   <InfoRow icon={<Building className="w-3.5 h-3.5" />} value={manager.departmentName ?? manager.department ?? '—'} />
+//                   <InfoRow icon={<Mail className="w-3.5 h-3.5" />}     value={manager.email} />
+//                   <InfoRow icon={<Hash className="w-3.5 h-3.5" />}     value={manager.studentId} />
+//                   {/* ← always resolved from departments list */}
+//                   <InfoRow icon={<Building className="w-3.5 h-3.5" />} value={deptName(manager)} />
 //                 </div>
 
-//                 {/* Actions */}
 //                 <div className="flex items-center justify-between mt-4 pt-4 border-t border-slate-100">
 //                   <button
 //                     onClick={() => handleEdit(manager)}
@@ -359,63 +383,52 @@
 //       >
 //         <div className="space-y-4">
 
-//           {/* Avatar preview at top of modal */}
+//           {/* Live avatar preview */}
 //           {(formData.firstName || formData.lastName) && (
 //             <div className="flex items-center gap-3 p-4 bg-slate-50 rounded-2xl border border-slate-200">
 //               <Avatar name={`${formData.firstName} ${formData.lastName}`.trim()} size={44} />
 //               <div>
 //                 <p className="text-[14px] font-bold text-slate-800">
-//                   {`${formData.firstName} ${formData.lastName}`.trim() || 'Preview'}
+//                   {`${formData.firstName} ${formData.lastName}`.trim()}
 //                 </p>
-//                 <p className="text-[11px] text-slate-400 mt-0.5">Lab Manager</p>
+//                 {/* Show resolved department name in preview */}
+//                 <p className="text-[11px] text-slate-400 mt-0.5">
+//                   {formData.departmentId !== ''
+//                     ? departments.find(d => d.id === Number(formData.departmentId))?.name ?? 'Lab Manager'
+//                     : 'Lab Manager'}
+//                 </p>
 //               </div>
 //             </div>
 //           )}
 
 //           <div className="grid grid-cols-2 gap-3">
 //             <FormField label="First Name *">
-//               <TextInput value={formData.firstName} onChange={v => setFormData({ ...formData, firstName: v })} placeholder="Jane" />
+//               <TextInput value={formData.firstName} onChange={v => fd({ firstName: v })} placeholder="Jane" />
 //             </FormField>
 //             <FormField label="Last Name *">
-//               <TextInput value={formData.lastName} onChange={v => setFormData({ ...formData, lastName: v })} placeholder="Doe" />
+//               <TextInput value={formData.lastName} onChange={v => fd({ lastName: v })} placeholder="Doe" />
 //             </FormField>
 //           </div>
 
 //           <FormField label="Employee ID *">
-//             <TextInput value={formData.studentId} onChange={v => setFormData({ ...formData, studentId: v })} placeholder="LABMGR001" />
+//             <TextInput value={formData.studentId} onChange={v => fd({ studentId: v })} placeholder="LABMGR001" />
 //           </FormField>
 
 //           <FormField label="Email *">
-//             <TextInput type="email" value={formData.email} onChange={v => setFormData({ ...formData, email: v })} placeholder="manager@university.edu" />
+//             <TextInput type="email" value={formData.email} onChange={v => fd({ email: v })} placeholder="manager@university.edu" />
 //           </FormField>
 
 //           <FormField label={editingManager ? 'New Password (leave blank to keep)' : 'Password *'}>
-//             <TextInput type="password" value={formData.password} onChange={v => setFormData({ ...formData, password: v })} placeholder="••••••••" />
+//             <TextInput type="password" value={formData.password} onChange={v => fd({ password: v })} placeholder="••••••••" />
 //           </FormField>
 
+//           {/* Department — binds to departmentId (number), sends id to backend */}
 //           <FormField label="Department *">
-
-
-//             <div className="relative">
-//               <select
-//                 value={formData.department}
-//                 onChange={e => setFormData({ ...formData, department: e.target.value })}
-//                 className="w-full appearance-none px-4 py-2.5 text-sm text-slate-800 bg-slate-50 border border-slate-200 rounded-xl
-//       focus:outline-none focus:ring-2 focus:ring-blue-200 focus:border-blue-400 focus:bg-white transition-all duration-150"
-//               >
-//                 <option value="">Select department…</option>
-//                 {departments.map(d => (
-//                   <option key={d.id} value={d.id}>{d.name}</option>
-//                 ))}
-//               </select>
-//               <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
-//                 <svg className="w-4 h-4" viewBox="0 0 20 20" fill="currentColor">
-//                   <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
-//                 </svg>
-//               </div>
-//             </div>
-
-
+//             <DeptSelect
+//               departments={departments}
+//               value={formData.departmentId}
+//               onChange={id => fd({ departmentId: id })}
+//             />
 //           </FormField>
 
 //           <div className="flex justify-end gap-3 pt-4 border-t border-slate-100">
@@ -440,10 +453,6 @@
 // };
 
 // export default LabManagersPage;
-
-
-
-
 
 
 
@@ -570,13 +579,15 @@ const DeptSelect = ({
 }) => (
   <div className="relative">
     <select
-      value={value}
+      // Always compare as strings — the DOM treats all option values as strings.
+      // Without String() coercion, a numeric value like 3 won't match option "3".
+      value={value === '' ? '' : String(value)}
       onChange={e => onChange(e.target.value === '' ? '' : Number(e.target.value))}
       className={`${textInputCls} appearance-none pr-10 cursor-pointer`}
     >
       <option value="">Select department…</option>
       {departments.map(d => (
-        <option key={d.id} value={d.id}>{d.name}</option>
+        <option key={d.id} value={String(d.id)}>{d.name}</option>
       ))}
     </select>
     <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
@@ -634,14 +645,32 @@ const LabManagersPage = () => {
   // ── Open modal for EDIT — pre-fill departmentId from manager.departmentId ──
   const handleEdit = (manager: User) => {
     setEditingManager(manager);
+
+    // Resolve department ID robustly — UserDTO may expose it in different shapes:
+    //  1. manager.departmentId       — direct numeric FK (most common)
+    //  2. manager.department?.id     — if UserDTO nests a Department object
+    //  3. name-match fallback        — if only departmentName is available
+    const resolvedDeptId: number | '' = (() => {
+      if (manager.departmentId)
+        return Number(manager.departmentId);
+      const nested = (manager as any).department;
+      if (nested?.id)
+        return Number(nested.id);
+      const name = manager.departmentName ?? (typeof nested === 'string' ? nested : '');
+      if (name) {
+        const match = departments.find(d => d.name.toLowerCase() === name.toLowerCase());
+        if (match) return match.id;
+      }
+      return '';
+    })();
+
     setFormData({
-      studentId:    manager.studentId  ?? '',
-      email:        manager.email      ?? '',
-      password:     '',                         // never pre-fill password
-      firstName:    manager.firstName  ?? '',
-      lastName:     manager.lastName   ?? '',
-      // manager.departmentId comes from UserDTO — the numeric FK
-      departmentId: manager.departmentId ? Number(manager.departmentId) : '',
+      studentId:    manager.studentId ?? '',
+      email:        manager.email     ?? '',
+      password:     '',
+      firstName:    manager.firstName ?? '',
+      lastName:     manager.lastName  ?? '',
+      departmentId: resolvedDeptId,
     });
     setIsModalOpen(true);
   };
