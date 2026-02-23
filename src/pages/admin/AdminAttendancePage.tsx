@@ -866,7 +866,7 @@ const SlotBlock = ({
   search:       string;
   animDelay:    string;
 }) => {
-  const [collapsed, setCollapsed] = useState(false);
+  const [collapsed, setCollapsed] = useState(true);
   const gp = getPalette(`slot-${slot.slotNumber}`);
 
   const filtered = slot.regs.filter(r => {
