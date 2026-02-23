@@ -26,6 +26,7 @@ export interface User {
   fullName: string;
   phoneNumber?: string;
   programId?: number;
+  departmentId?: string;
   programName?: string;
   departmentName?: string;
   department?: string;
